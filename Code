@@ -1,0 +1,250 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <iostream>
+#include <string.h>
+#include <locale.h>
+#include <queue>
+#include <vector>
+#include <limits.h>
+#include <ctime>
+#include <limits.h> 
+//меню надо(например вводить самому или генерировать матрицу), сохранять данные в файл(чтобы сохранял в разные файлы,
+//считывание с любого файла матрицы чтобы работала программа. 
+void printMatrisa(int** dist, int V);
+void Floyd(int** graph, int V);
+void generateRandomMatrisa(int** graph, int V, int directed);
+void inputMatrisa(int** graph, int V, int directed);
+void saveFile(int** graph, int V, const char* filename);
+void loadFile(int** graph, int V, const char* filename);
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+    srand(time(NULL));
+    int V, choice, exit = 0, directed;
+    int** graph = NULL;
+
+    while (!exit) {
+        printf("Выберите действие:\n");
+        printf("1. Ввести количество вершин и создать матрицу графа\n");
+        printf("2. Загрузить матрицу графа из файла\n");
+        printf("3. Завершить программу\n");
+        scanf("%d", &choice);
+
+        if (choice == 1) {
+            printf("Введите количество вершин в графе: ");
+            scanf("%d", &V);
+            // Динамическое выделение памяти для матрицы графа
+            graph = (int**)malloc(V * sizeof(int*));
+            for (int i = 0; i < V; i++) {
+                graph[i] = (int*)malloc(V * sizeof(int));
+            }
+            printf("Выберите тип графа:\n");
+            printf("1. Ориентированный\n");
+            printf("2. Неориентированный\n");
+            scanf("%d", &directed);
+            directed = (directed == 1) ? 1 : 0;
+            printf("Выберите способ создания матрицы графа:\n");
+            printf("1. Сгенерировать случайным образом\n");
+            printf("2. Ввести самостоятельно\n");
+            scanf("%d", &choice);
+            if (choice == 1)
+                generateRandomMatrisa(graph, V, directed);
+            else if (choice == 2)
+                inputMatrisa(graph, V, directed);
+            else {
+                printf("Неверный выбор. Попробуйте снова.\n");
+                continue;
+            }
+        }
+        else if (choice == 2) {
+            char filename[100];
+            printf("Введите имя файла для загрузки: ");
+            scanf("%s", filename);
+            printf("Введите количество вершин в графе: ");
+            scanf("%d", &V);
+
+            //Динамическое выделение памяти для матрицы графа
+            graph = (int**)malloc(V * sizeof(int*));
+            for (int i = 0; i < V; i++) {
+                graph[i] = (int*)malloc(V * sizeof(int));
+            }
+            loadFile(graph, V, filename);
+            // Вывод загруженной матрицы графа
+            printf("Матрица графа:\n");
+            for (int i = 0; i < V; i++) {
+                for (int j = 0; j < V; j++) {
+                    if (graph[i][j] == INT_MAX)
+                        printf("%7s", "INF");
+                    else
+                        printf("%7d", graph[i][j]);
+                }
+                printf("\n");
+            }
+            // Выполнение алгоритма Флойда
+            Floyd(graph, V);
+            for (int i = 0; i < V; i++) {
+                free(graph[i]);
+            }
+            free(graph);
+            graph = NULL;
+            continue; 
+        }
+        else if (choice == 3) {
+            exit = 1;
+        }
+        else {
+            printf("Неверный выбор. Попробуйте снова.\n");
+            continue;
+        }
+        printf("Матрица графа:\n");
+        for (int i = 0; i < V; i++) {
+            for (int j = 0; j < V; j++) {
+                if (graph[i][j] == INT_MAX)
+                    printf("%7s", "INF");
+                else
+                    printf("%7d", graph[i][j]);
+            }
+            printf("\n");
+        }
+        if (graph != NULL) {
+            // Выполнение алгоритма Флойда
+            Floyd(graph, V);
+            char saveFilename[100];
+            printf("Введите имя файла для сохранения матрицы: ");
+            scanf("%s", saveFilename);
+            saveFile(graph, V, saveFilename);
+            for (int i = 0; i < V; i++) {
+                free(graph[i]);
+            }
+            free(graph);
+            graph = NULL;
+        }
+    }
+    return 0;
+}
+
+void generateRandomMatrisa(int** graph, int V, int directed) {
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            if (rand() % 100 < 20) { // С вероятностью 20%
+               graph[i][j] = INT_MAX; // INF
+            }
+            else {
+               graph[i][j] = rand() % 20; // Случайный вес ребра от 0 до 19
+            }
+            if (!directed) {
+               graph[j][i] = graph[i][j]; // Симметрия для неориентированного графа
+            }
+        }
+    }
+}
+
+void inputMatrisa(int** graph, int V, int directed) {
+    printf("Введите матрицу графа (используйте -1 для INF):\n");
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            printf("Введите ребро (%d, %d): ", i, j);
+            int value;
+            scanf("%d", &value);
+            if (value == -1) {
+                graph[i][j] = INT_MAX; // INF
+            }
+            else {
+                graph[i][j] = value;
+            }
+        }
+    }
+    // Заполнение симметричных элементов для неориентированного графа
+    if (!directed) {
+        for (int i = 0; i < V; i++) {
+            for (int j = i + 1; j < V; j++) {
+                if (graph[i][j] != INT_MAX) {
+                    graph[j][i] = graph[i][j];
+                }
+            }
+        }
+    }
+}
+
+void saveFile(int** graph, int V, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("Не удалось открыть файл для записи.\n");
+        return;
+    }
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            if (graph[i][j] == INT_MAX) {
+                fprintf(file, "-1 "); // Сохраняем INT_MAX как -1
+            }
+            else {
+                fprintf(file, "%d ", graph[i][j]);
+            }
+        }
+        fprintf(file, "\n");
+    }
+    fclose(file);
+    printf("Матрица успешно сохранена в файл %s.\n", filename);
+}
+
+void loadFile(int** graph, int V, const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Не удалось открыть файл для чтения.\n");
+        return;
+    }
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            int value;
+            fscanf(file, "%d", &value);
+            if (value == -1) {
+                graph[i][j] = INT_MAX; // Загружаем -1 как INT_MAX
+            }
+            else {
+                graph[i][j] = value;
+            }
+        }
+    }
+    fclose(file);
+    printf("Матрица успешно загружена из файла %s.\n", filename);
+}
+
+void Floyd(int** graph, int V) {
+    int** dist = (int**)malloc(V * sizeof(int*));
+    for (int i = 0; i < V; i++)
+        dist[i] = (int*)malloc(V * sizeof(int));
+    // Инициализация матрицы расстояний
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            dist[i][j] = graph[i][j];
+    //определение расстояний
+    for (int k = 0; k < V; k++) {
+        for (int i = 0; i < V; i++) {
+            for (int j = 0; j < V; j++) {
+                if (dist[i][k] != INT_MAX && dist[k][j] != INT_MAX && dist[i][k] + dist[k][j] < dist[i][j])
+                    dist[i][j] = dist[i][k] + dist[k][j];
+            }
+        }
+    }
+    // Вывод матрицы кратчайших путей
+    printMatrisa(dist, V);
+    for (int i = 0; i < V; i++) {
+        free(dist[i]);
+    }
+    free(dist);
+}
+
+void printMatrisa(int** dist, int V) {
+    printf("Матрица кратчайших путей:\n");
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            if (dist[i][j] == INT_MAX)
+                printf("%7s", "INF");
+            else
+                printf("%7d", dist[i][j]);
+        }
+        printf("\n");
+    }
+}
